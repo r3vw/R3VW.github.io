@@ -1,9 +1,138 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
-  <meta http-equiv="refresh" content="0; URL=https://www.youtube.com/watch?v=dQw4w9WgXcQ">
+    <meta charset="UTF-8">
+    <title>P2P 실시간 유튜브 함께 보기</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PeerJS 라이브러리 (서버 없이 P2P 연결을 돕는 도구) -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 </head>
-<body>
+<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center p-6">
+
+    <div class="max-w-3xl w-full space-y-6">
+        <h1 class="text-2xl font-bold text-center">✨ P2P 실시간 유튜브 시청방</h1>
+
+        <!-- 연결 상태 및 방 정보 -->
+        <div class="bg-gray-800 p-4 rounded-lg flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div>
+                <p id="myPeerId" class="text-sm text-gray-400">내 연결 ID 생성 중...</p>
+                <p id="connectionStatus" class="text-sm font-semibold text-yellow-400">상태: 연결 대기 중</p>
+            </div>
+            <div class="flex gap-2 w-full sm:w-auto">
+                <input type="text" id="targetPeerId" placeholder="방장의 ID 입력" class="px-3 py-1.5 rounded text-black text-sm flex-1">
+                <button onclick="connectToHost()" class="bg-blue-600 hover:bg-blue-700 px-4 py-1.5 rounded text-sm font-medium">참가하기</button>
+            </div>
+        </div>
+
+        <!-- 유튜브 재생 영역 -->
+        <div class="aspect-video bg-black rounded-lg overflow-hidden shadow-lg">
+            <iframe id="player" class="w-full h-full" src="" frameborder="0" allowfullscreen></iframe>
+        </div>
+
+        <!-- 영상 제어 영역 (방장만 혹은 누구나) -->
+        <div class="bg-gray-800 p-4 rounded-lg flex gap-2">
+            <input type="text" id="urlInput" placeholder="유튜브 링크 입력 (예: https://youtu.be/...)" class="flex-1 p-2 rounded text-black text-sm">
+            <button onclick="changeVideo()" class="bg-red-600 hover:bg-red-700 px-6 py-2 rounded text-sm font-medium">영상 바꾸기</button>
+        </div>
+    </div>
+
+    <script>
+        let peer;
+        let conn;
+        let isHost = false;
+        const player = document.getElementById('player');
+        const statusEl = document.getElementById('connectionStatus');
+        const myPeerIdEl = document.getElementById('myPeerId');
+
+        // 1. Peer 객체 생성 (PeerJS 무료 공용 시그널링 서버 사용)
+        // 이 서버는 오직 '처음 서로의 IP/주소를 찾아주는 역할'만 하고 데이터는 거치지 않습니다.
+        peer = new Peer();
+
+        peer.on('open', (id) => {
+            myPeerIdEl.textContent = `내 방 ID (공유용): ${id}`;
+            statusEl.textContent = "상태: 방 생성됨 (내가 방장)";
+            statusEl.className = "text-sm font-semibold text-green-400";
+            isHost = true;
+        });
+
+        // 2. 다른 사람이 나에게 접속했을 때 (방장 입장에서 실행)
+        peer.on('connection', (incomingConn) => {
+            conn = incomingConn;
+            setupConnection();
+            statusEl.textContent = "상태: 친구가 접속했습니다! (P2P 연결됨)";
+            statusEl.className = "text-sm font-semibold text-green-400";
+        });
+
+        // 3. 참여자가 방장에게 연결할 때
+        function connectToHost() {
+            const hostId = document.getElementById('targetPeerId').value.trim();
+            if (!hostId) {
+                alert('방장의 ID를 입력해주세요!');
+                return;
+            }
+
+            conn = peer.connect(hostId);
+            setupConnection();
+            isHost = false;
+            statusEl.textContent = "상태: 방장에 연결 중...";
+        }
+
+        // 4. 데이터 통신 설정
+        function setupConnection() {
+            conn.on('open', () => {
+                statusEl.textContent = "상태: P2P 연결 성공!";
+                statusEl.className = "text-sm font-semibold text-green-400";
+            });
+
+            // 상대방으로부터 데이터(영상 변경 신호 등)를 받았을 때
+            conn.on('data', (data) => {
+                if (data.type === 'CHANGE_VIDEO') {
+                    setPlayerVideo(data.videoId);
+                }
+            });
+
+            conn.on('close', () => {
+                statusEl.textContent = "상태: 연결이 종료되었습니다.";
+                statusEl.className = "text-sm font-semibold text-red-400";
+            });
+        }
+
+        // 유튜브 ID 추출
+        function extractYouTubeId(url) {
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[2].length === 11) ? match[2] : null;
+        }
+
+        // 플레이어에 영상 띄우기
+        function setPlayerVideo(videoId) {
+            player.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+        }
+
+        // 영상 변경 버튼 클릭 시
+        function changeVideo() {
+            const url = document.getElementById('urlInput').value;
+            const videoId = extractYouTubeId(url);
+            
+            if (!videoId) {
+                alert('올바른 유튜브 링크를 입력해주세요.');
+                return;
+            }
+
+            // 내 화면 변경
+            setPlayerVideo(videoId);
+
+            // 내가 방장이라면 -> 접속한 친구들에게 전송
+            if (isHost && conn && conn.open) {
+                conn.send({ type: 'CHANGE_VIDEO', videoId: videoId });
+            } 
+            // 내가 참여자라면 -> 방장에게 전송 (방장이 전체 전파하게 하거나 동기화)
+            else if (!isHost && conn && conn.open) {
+                conn.send({ type: 'CHANGE_VIDEO', videoId: videoId });
+            }
+        }
+    </script>
 </body>
 </html>
 
