@@ -1,0 +1,1658 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>무지성 랜덤 뽑기</title>
+
+<style>
+*{
+    box-sizing:border-box;
+    user-select:none;
+}
+
+html,body{
+    margin:0;
+    min-height:100%;
+    font-family:Arial,"Noto Sans KR",sans-serif;
+    color:#fff;
+    background:#080a12;
+}
+
+body{
+    min-height:100vh;
+    overflow-x:hidden;
+}
+
+button{
+    font:inherit;
+    border:0;
+    cursor:pointer;
+}
+
+.background{
+    position:fixed;
+    inset:0;
+    z-index:-3;
+    background:
+        radial-gradient(circle at 15% 15%,#302b75 0,transparent 30%),
+        radial-gradient(circle at 85% 75%,#68245d 0,transparent 30%),
+        radial-gradient(circle at 50% 100%,#122c53 0,transparent 35%),
+        #080a12;
+}
+
+.background::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background-image:
+        linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+    background-size:40px 40px;
+}
+
+.app{
+    width:min(1150px,94vw);
+    margin:auto;
+    padding:35px 0 60px;
+}
+
+header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:20px;
+    margin-bottom:25px;
+}
+
+.logo{
+    font-size:34px;
+    font-weight:1000;
+    letter-spacing:-2px;
+}
+
+.logo span{
+    color:#8c72ff;
+}
+
+.wallet{
+    display:flex;
+    align-items:center;
+    gap:15px;
+    padding:12px 18px;
+    border:1px solid #323854;
+    border-radius:16px;
+    background:rgba(15,18,32,.85);
+}
+
+.coin{
+    font-size:20px;
+}
+
+.coin strong{
+    margin-left:5px;
+    font-size:20px;
+}
+
+.main{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 330px;
+    gap:20px;
+}
+
+.card{
+    border:1px solid #303650;
+    background:rgba(13,16,29,.88);
+    border-radius:26px;
+    box-shadow:0 25px 80px rgba(0,0,0,.35);
+    backdrop-filter:blur(15px);
+}
+
+.gacha{
+    padding:25px;
+}
+
+.result{
+    position:relative;
+    min-height:390px;
+    overflow:hidden;
+    border-radius:22px;
+    border:1px solid #343b5d;
+    background:
+        radial-gradient(circle at center,#202746 0,transparent 55%),
+        #0d1020;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+}
+
+.result::before{
+    content:"";
+    position:absolute;
+    width:300px;
+    height:300px;
+    border-radius:50%;
+    border:1px solid rgba(255,255,255,.06);
+    box-shadow:
+        0 0 80px rgba(121,95,255,.1),
+        inset 0 0 80px rgba(121,95,255,.08);
+}
+
+.result.spinning{
+    animation:shake .09s infinite;
+}
+
+.item-icon{
+    position:relative;
+    z-index:1;
+    font-size:105px;
+    line-height:1;
+    margin-bottom:20px;
+    filter:drop-shadow(0 0 25px rgba(255,255,255,.15));
+}
+
+.item-name{
+    position:relative;
+    z-index:1;
+    font-size:38px;
+    font-weight:1000;
+    letter-spacing:-2px;
+}
+
+.item-rarity{
+    position:relative;
+    z-index:1;
+    margin-top:8px;
+    font-size:18px;
+    font-weight:900;
+}
+
+.item-desc{
+    position:relative;
+    z-index:1;
+    margin-top:10px;
+    color:#9ca4c1;
+    text-align:center;
+    padding:0 20px;
+}
+
+.common{color:#c8ccda}
+.rare{color:#54a9ff;text-shadow:0 0 18px #247cff}
+.epic{color:#bd83ff;text-shadow:0 0 18px #863cff}
+.mythic{color:#ffad4c;text-shadow:0 0 20px #ff6d00}
+.legendary{color:#ff72e9;text-shadow:0 0 25px #ff22d4}
+
+.cost{
+    margin:18px 0 10px;
+    color:#929ab7;
+    text-align:center;
+}
+
+.buttons{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+}
+
+.draw-button{
+    padding:18px;
+    border-radius:16px;
+    color:white;
+    font-size:20px;
+    font-weight:1000;
+    background:linear-gradient(135deg,#695aff,#a04cff);
+    box-shadow:0 10px 35px rgba(109,76,255,.25);
+}
+
+.draw-button:hover{
+    transform:translateY(-2px);
+}
+
+.draw-button.ten{
+    background:linear-gradient(135deg,#b64fff,#e74fff);
+}
+
+.secondary{
+    padding:14px;
+    border-radius:14px;
+    color:#d8dcf0;
+    background:#191d31;
+    border:1px solid #303650;
+}
+
+.secondary:hover{
+    background:#20253d;
+}
+
+.pity{
+    margin-top:15px;
+    padding:14px 16px;
+    border-radius:14px;
+    background:#111528;
+    border:1px solid #272d48;
+}
+
+.pity-top{
+    display:flex;
+    justify-content:space-between;
+    margin-bottom:9px;
+    color:#aab1ca;
+    font-size:13px;
+}
+
+.progress{
+    height:9px;
+    border-radius:20px;
+    overflow:hidden;
+    background:#090c16;
+}
+
+.progress-fill{
+    width:0%;
+    height:100%;
+    border-radius:20px;
+    background:linear-gradient(90deg,#775cff,#e252ff);
+    transition:.3s;
+}
+
+.side{
+    padding:18px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+}
+
+.tabs{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:6px;
+}
+
+.tab{
+    padding:11px 5px;
+    border-radius:10px;
+    color:#858da8;
+    background:#111527;
+}
+
+.tab.active{
+    color:white;
+    background:#282e4c;
+}
+
+.panel{
+    display:none;
+}
+
+.panel.active{
+    display:block;
+}
+
+.panel-title{
+    margin:5px 0 12px;
+    font-weight:900;
+}
+
+.stats{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+}
+
+.stat{
+    padding:13px;
+    border-radius:13px;
+    background:#111527;
+    border:1px solid #252b44;
+}
+
+.stat small{
+    display:block;
+    color:#737b98;
+    margin-bottom:4px;
+}
+
+.stat strong{
+    font-size:20px;
+}
+
+.collection{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:7px;
+}
+
+.collection-item{
+    aspect-ratio:1;
+    border-radius:11px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    background:#111527;
+    border:1px solid #272d48;
+    font-size:24px;
+}
+
+.collection-item.locked{
+    filter:grayscale(1);
+    opacity:.3;
+}
+
+.collection-item small{
+    margin-top:4px;
+    max-width:90%;
+    overflow:hidden;
+    white-space:nowrap;
+    text-overflow:ellipsis;
+    font-size:8px;
+    color:#a2a9bf;
+}
+
+.history{
+    max-height:270px;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+}
+
+.history-row{
+    padding:10px;
+    border-radius:10px;
+    background:#111527;
+    border:1px solid #252b44;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:8px;
+    font-size:13px;
+}
+
+.history-row span:last-child{
+    font-weight:900;
+}
+
+.achievement{
+    padding:12px;
+    border-radius:12px;
+    background:#111527;
+    border:1px solid #252b44;
+    margin-bottom:7px;
+}
+
+.achievement.done{
+    border-color:#705eff;
+    background:#181631;
+}
+
+.achievement-title{
+    font-weight:900;
+}
+
+.achievement-desc{
+    margin-top:4px;
+    color:#858da7;
+    font-size:12px;
+}
+
+.achievement-progress{
+    margin-top:7px;
+    color:#a9b0c8;
+    font-size:11px;
+}
+
+.probability{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+}
+
+.prob-row{
+    display:flex;
+    justify-content:space-between;
+    padding:9px 10px;
+    border-radius:9px;
+    background:#111527;
+}
+
+.modal{
+    position:fixed;
+    inset:0;
+    z-index:50;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    background:rgba(0,0,0,.75);
+    backdrop-filter:blur(10px);
+}
+
+.modal.show{
+    display:flex;
+}
+
+.modal-box{
+    width:min(550px,95vw);
+    max-height:85vh;
+    overflow:auto;
+    padding:25px;
+    border-radius:25px;
+    background:#101425;
+    border:1px solid #383f60;
+    box-shadow:0 30px 100px #000;
+}
+
+.modal-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:18px;
+}
+
+.close{
+    width:36px;
+    height:36px;
+    border-radius:10px;
+    color:#fff;
+    background:#22273c;
+}
+
+.reward{
+    text-align:center;
+    padding:30px;
+    border-radius:20px;
+    background:#151a2d;
+}
+
+.reward-icon{
+    font-size:90px;
+}
+
+.reward-name{
+    margin-top:10px;
+    font-size:30px;
+    font-weight:1000;
+}
+
+.multi-results{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:7px;
+}
+
+.multi-item{
+    padding:13px 5px;
+    text-align:center;
+    border-radius:11px;
+    background:#111527;
+    border:1px solid #292f49;
+}
+
+.multi-item div:first-child{
+    font-size:34px;
+}
+
+.multi-item small{
+    display:block;
+    margin-top:6px;
+    overflow:hidden;
+    white-space:nowrap;
+    text-overflow:ellipsis;
+    font-size:9px;
+}
+
+.reset{
+    width:100%;
+    margin-top:10px;
+    padding:12px;
+    color:#ff8999;
+    background:#24151c;
+    border:1px solid #472631;
+    border-radius:12px;
+}
+
+.flash{
+    position:fixed;
+    inset:0;
+    z-index:100;
+    pointer-events:none;
+    opacity:0;
+}
+
+.flash.show{
+    animation:flash .7s ease-out;
+}
+
+.particles{
+    position:fixed;
+    inset:0;
+    z-index:90;
+    pointer-events:none;
+}
+
+.particle{
+    position:absolute;
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:white;
+    animation:particle 1.1s ease-out forwards;
+}
+
+.toast{
+    position:fixed;
+    left:50%;
+    bottom:30px;
+    z-index:200;
+    transform:translate(-50%,20px);
+    opacity:0;
+    padding:13px 20px;
+    border-radius:14px;
+    background:#20263c;
+    border:1px solid #3a4262;
+    box-shadow:0 15px 50px rgba(0,0,0,.4);
+    transition:.25s;
+    pointer-events:none;
+}
+
+.toast.show{
+    opacity:1;
+    transform:translate(-50%,0);
+}
+
+@keyframes shake{
+    0%{transform:translate(2px,0) rotate(0)}
+    25%{transform:translate(-2px,2px) rotate(-1deg)}
+    50%{transform:translate(2px,-2px) rotate(1deg)}
+    75%{transform:translate(-2px,0) rotate(1deg)}
+    100%{transform:translate(0,2px) rotate(0)}
+}
+
+@keyframes flash{
+    0%{opacity:.8;background:#fff}
+    100%{opacity:0;background:#fff}
+}
+
+@keyframes particle{
+    0%{
+        transform:translate(0,0) scale(1);
+        opacity:1;
+    }
+    100%{
+        transform:translate(
+            calc((var(--x) - .5) * 100vw),
+            calc((var(--y) - .5) * 100vh)
+        ) scale(0);
+        opacity:0;
+    }
+}
+
+@media(max-width:850px){
+    .main{
+        grid-template-columns:1fr;
+    }
+
+    .side{
+        min-height:500px;
+    }
+}
+
+@media(max-width:550px){
+    .app{
+        width:94vw;
+        padding-top:20px;
+    }
+
+    header{
+        align-items:flex-start;
+        flex-direction:column;
+    }
+
+    .logo{
+        font-size:27px;
+    }
+
+    .wallet{
+        width:100%;
+        justify-content:center;
+    }
+
+    .gacha{
+        padding:13px;
+    }
+
+    .result{
+        min-height:320px;
+    }
+
+    .item-icon{
+        font-size:80px;
+    }
+
+    .item-name{
+        font-size:29px;
+    }
+
+    .multi-results{
+        grid-template-columns:repeat(2,1fr);
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="background"></div>
+<div class="flash" id="flash"></div>
+<div class="particles" id="particles"></div>
+<div class="toast" id="toast"></div>
+
+<div class="app">
+
+<header>
+    <div class="logo">
+        무지성 <span>랜덤 뽑기</span>
+    </div>
+
+    <div class="wallet">
+        <span class="coin">🪙</span>
+        <strong id="coins">5000</strong>
+        <button class="secondary" id="earnCoins" style="padding:7px 12px">
+            +1000
+        </button>
+    </div>
+</header>
+
+<div class="main">
+
+<section class="card gacha">
+
+    <div class="result" id="result">
+
+        <div class="item-icon" id="itemIcon">?</div>
+
+        <div class="item-name" id="itemName">
+            뽑기를 시작하세요
+        </div>
+
+        <div class="item-rarity common" id="itemRarity">
+            아직 아무것도 없습니다
+        </div>
+
+        <div class="item-desc" id="itemDesc">
+            운명을 확인해보세요
+        </div>
+
+    </div>
+
+    <div class="cost">
+        1회 <b>100 🪙</b>
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        10회 <b>900 🪙</b>
+    </div>
+
+    <div class="buttons">
+
+        <button class="draw-button" id="draw1">
+            1회 뽑기
+        </button>
+
+        <button class="draw-button ten" id="draw10">
+            10회 뽑기
+        </button>
+
+    </div>
+
+    <div class="pity">
+
+        <div class="pity-top">
+            <span>영웅 이상 확정까지</span>
+            <span id="pityText">0 / 50</span>
+        </div>
+
+        <div class="progress">
+            <div class="progress-fill" id="pityBar"></div>
+        </div>
+
+    </div>
+
+</section>
+
+<aside class="card side">
+
+    <div class="tabs">
+
+        <button class="tab active" data-tab="statsPanel">
+            통계
+        </button>
+
+        <button class="tab" data-tab="collectionPanel">
+            도감
+        </button>
+
+        <button class="tab" data-tab="morePanel">
+            기타
+        </button>
+
+    </div>
+
+    <div class="panel active" id="statsPanel">
+
+        <div class="panel-title">뽑기 통계</div>
+
+        <div class="stats">
+
+            <div class="stat">
+                <small>총 뽑기</small>
+                <strong id="totalPulls">0</strong>
+            </div>
+
+            <div class="stat">
+                <small>최고 등급</small>
+                <strong id="bestRarity">없음</strong>
+            </div>
+
+            <div class="stat">
+                <small>전설 획득</small>
+                <strong id="legendCount">0</strong>
+            </div>
+
+            <div class="stat">
+                <small>도감</small>
+                <strong id="collectionCount">0 / 10</strong>
+            </div>
+
+        </div>
+
+        <div class="panel-title" style="margin-top:18px">
+            획득 확률
+        </div>
+
+        <div class="probability">
+
+            <div class="prob-row">
+                <span class="common">일반</span>
+                <b>70%</b>
+            </div>
+
+            <div class="prob-row">
+                <span class="rare">희귀</span>
+                <b>22%</b>
+            </div>
+
+            <div class="prob-row">
+                <span class="epic">영웅</span>
+                <b>6.5%</b>
+            </div>
+
+            <div class="prob-row">
+                <span class="mythic">신화</span>
+                <b>1.2%</b>
+            </div>
+
+            <div class="prob-row">
+                <span class="legendary">전설</span>
+                <b>0.3%</b>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="panel" id="collectionPanel">
+
+        <div class="panel-title">
+            아이템 도감
+        </div>
+
+        <div class="collection" id="collection"></div>
+
+    </div>
+
+    <div class="panel" id="morePanel">
+
+        <div class="panel-title">
+            업적
+        </div>
+
+        <div id="achievements"></div>
+
+        <div class="panel-title" style="margin-top:18px">
+            최근 기록
+        </div>
+
+        <div class="history" id="history"></div>
+
+        <button class="reset" id="reset">
+            저장 데이터 초기화
+        </button>
+
+    </div>
+
+</aside>
+
+</div>
+</div>
+
+<div class="modal" id="modal">
+
+    <div class="modal-box">
+
+        <div class="modal-header">
+
+            <h2 id="modalTitle">결과</h2>
+
+            <button class="close" id="closeModal">
+                ×
+            </button>
+
+        </div>
+
+        <div id="modalContent"></div>
+
+    </div>
+
+</div>
+
+<script>
+const ITEMS = [
+
+    {
+        id:"stone",
+        name:"돌멩이",
+        icon:"🪨",
+        rarity:"일반",
+        className:"common",
+        weight:700,
+        desc:"그냥 평범한 돌멩이다"
+    },
+
+    {
+        id:"sock",
+        name:"낡은 양말",
+        icon:"🧦",
+        rarity:"일반",
+        className:"common",
+        weight:700,
+        desc:"짝이 맞는지는 아무도 모른다"
+    },
+
+    {
+        id:"potato",
+        name:"수상한 감자",
+        icon:"🥔",
+        rarity:"일반",
+        className:"common",
+        weight:700,
+        desc:"묘하게 따뜻하다"
+    },
+
+    {
+        id:"apple",
+        name:"황금 사과",
+        icon:"🍎",
+        rarity:"희귀",
+        className:"rare",
+        weight:220,
+        desc:"먹으면 왠지 강해질 것 같다"
+    },
+
+    {
+        id:"diamond",
+        name:"다이아몬드",
+        icon:"💎",
+        rarity:"희귀",
+        className:"rare",
+        weight:220,
+        desc:"비싸 보인다"
+    },
+
+    {
+        id:"remote",
+        name:"우주 리모컨",
+        icon:"📡",
+        rarity:"영웅",
+        className:"epic",
+        weight:65,
+        desc:"무엇을 조종하는지는 알 수 없다"
+    },
+
+    {
+        id:"time",
+        name:"시간 정지 버튼",
+        icon:"⏸️",
+        rarity:"영웅",
+        className:"epic",
+        weight:65,
+        desc:"눌러도 시간은 멈추지 않는다"
+    },
+
+    {
+        id:"dice",
+        name:"신의 주사위",
+        icon:"🎲",
+        rarity:"신화",
+        className:"mythic",
+        weight:12,
+        desc:"던지는 순간 운명이 결정된다"
+    },
+
+    {
+        id:"sun",
+        name:"검은 태양",
+        icon:"🌑",
+        rarity:"신화",
+        className:"mythic",
+        weight:12,
+        desc:"존재해서는 안 되는 것"
+    },
+
+    {
+        id:"eye",
+        name:"???",
+        icon:"👁️",
+        rarity:"전설",
+        className:"legendary",
+        weight:3,
+        desc:"당신을 바라보고 있다"
+    }
+
+];
+
+const RARITY_LEVEL = {
+    "일반":0,
+    "희귀":1,
+    "영웅":2,
+    "신화":3,
+    "전설":4
+};
+
+const RARITY_ORDER = [
+    "일반",
+    "희귀",
+    "영웅",
+    "신화",
+    "전설"
+];
+
+const PITY_LIMIT = 50;
+
+let state = {
+    coins:5000,
+    total:0,
+    pity:0,
+    best:-1,
+    legend:0,
+    collection:{},
+    history:[],
+    achievements:{}
+};
+
+let busy = false;
+
+const $ = id => document.getElementById(id);
+
+function save(){
+    localStorage.setItem(
+        "randomGachaSave",
+        JSON.stringify(state)
+    );
+}
+
+function load(){
+
+    const saved =
+        localStorage.getItem("randomGachaSave");
+
+    if(saved){
+
+        try{
+            state = {
+                ...state,
+                ...JSON.parse(saved)
+            };
+        }catch(e){
+            console.log("save load error");
+        }
+
+    }
+
+    updateUI();
+}
+
+function showToast(message){
+
+    const toast = $("toast");
+
+    toast.textContent = message;
+
+    toast.classList.add("show");
+
+    clearTimeout(showToast.timer);
+
+    showToast.timer = setTimeout(()=>{
+        toast.classList.remove("show");
+    },1800);
+
+}
+
+function weightedRandom(){
+
+    const totalWeight =
+        ITEMS.reduce((sum,item)=>sum + item.weight,0);
+
+    let random = Math.random() * totalWeight;
+
+    for(const item of ITEMS){
+
+        random -= item.weight;
+
+        if(random <= 0){
+            return item;
+        }
+
+    }
+
+    return ITEMS[0];
+}
+
+function forceEpicOrHigher(){
+
+    const candidates =
+        ITEMS.filter(item =>
+            RARITY_LEVEL[item.rarity] >= 2
+        );
+
+    return candidates[
+        Math.floor(Math.random() * candidates.length)
+    ];
+}
+
+function getItem(){
+
+    state.pity++;
+
+    if(state.pity >= PITY_LIMIT){
+
+        state.pity = 0;
+
+        return forceEpicOrHigher();
+
+    }
+
+    return weightedRandom();
+}
+
+function updateResult(item){
+
+    $("itemIcon").textContent = item.icon;
+
+    $("itemName").textContent = item.name;
+
+    $("itemRarity").textContent = item.rarity;
+
+    $("itemRarity").className =
+        "item-rarity " + item.className;
+
+    $("itemDesc").textContent = item.desc;
+
+}
+
+function rarityLevel(item){
+    return RARITY_LEVEL[item.rarity];
+}
+
+function recordItem(item){
+
+    state.total++;
+
+    if(!state.collection[item.id]){
+        state.collection[item.id] = 0;
+    }
+
+    state.collection[item.id]++;
+
+    if(rarityLevel(item) > state.best){
+        state.best = rarityLevel(item);
+    }
+
+    if(item.rarity === "전설"){
+        state.legend++;
+    }
+
+    state.history.unshift({
+        id:item.id,
+        time:Date.now()
+    });
+
+    if(state.history.length > 50){
+        state.history.pop();
+    }
+
+}
+
+function burst(item){
+
+    if(rarityLevel(item) < 3){
+        return;
+    }
+
+    $("flash").classList.remove("show");
+
+    void $("flash").offsetWidth;
+
+    $("flash").classList.add("show");
+
+    const particles = $("particles");
+
+    for(let i=0;i<35;i++){
+
+        const p = document.createElement("div");
+
+        p.className = "particle";
+
+        p.style.left = "50%";
+
+        p.style.top = "50%";
+
+        p.style.setProperty(
+            "--x",
+            Math.random()
+        );
+
+        p.style.setProperty(
+            "--y",
+            Math.random()
+        );
+
+        particles.appendChild(p);
+
+        setTimeout(()=>{
+            p.remove();
+        },1200);
+
+    }
+
+}
+
+function updateUI(){
+
+    $("coins").textContent =
+        state.coins.toLocaleString();
+
+    $("totalPulls").textContent =
+        state.total.toLocaleString();
+
+    $("legendCount").textContent =
+        state.legend;
+
+    $("collectionCount").textContent =
+        `${Object.keys(state.collection).length} / ${ITEMS.length}`;
+
+    $("bestRarity").textContent =
+        state.best < 0
+            ? "없음"
+            : RARITY_ORDER[state.best];
+
+    $("pityText").textContent =
+        `${state.pity} / ${PITY_LIMIT}`;
+
+    $("pityBar").style.width =
+        `${Math.min(100,state.pity / PITY_LIMIT * 100)}%`;
+
+    renderCollection();
+
+    renderHistory();
+
+    renderAchievements();
+
+    save();
+
+}
+
+function renderCollection(){
+
+    const box = $("collection");
+
+    box.innerHTML = "";
+
+    ITEMS.forEach(item=>{
+
+        const owned =
+            !!state.collection[item.id];
+
+        const el =
+            document.createElement("div");
+
+        el.className =
+            "collection-item" +
+            (owned ? "" : " locked");
+
+        el.innerHTML = owned
+            ? `
+                <div>${item.icon}</div>
+                <small>${item.name}</small>
+                <small>x${state.collection[item.id]}</small>
+              `
+            : `
+                <div>?</div>
+                <small>???</small>
+              `;
+
+        box.appendChild(el);
+
+    });
+
+}
+
+function renderHistory(){
+
+    const box = $("history");
+
+    box.innerHTML = "";
+
+    if(!state.history.length){
+
+        box.innerHTML =
+            `<div style="color:#707892">
+                아직 기록이 없습니다
+            </div>`;
+
+        return;
+
+    }
+
+    state.history.slice(0,20).forEach(record=>{
+
+        const item =
+            ITEMS.find(x=>x.id === record.id);
+
+        if(!item){
+            return;
+        }
+
+        const row =
+            document.createElement("div");
+
+        row.className = "history-row";
+
+        row.innerHTML = `
+            <span>${item.icon} ${item.name}</span>
+            <span class="${item.className}">
+                ${item.rarity}
+            </span>
+        `;
+
+        box.appendChild(row);
+
+    });
+
+}
+
+const ACHIEVEMENTS = [
+
+    {
+        id:"first",
+        title:"첫 발걸음",
+        desc:"1회 뽑기",
+        target:1,
+        get:()=>state.total
+    },
+
+    {
+        id:"ten",
+        title:"슬슬 시작",
+        desc:"10회 뽑기",
+        target:10,
+        get:()=>state.total
+    },
+
+    {
+        id:"hundred",
+        title:"무지성",
+        desc:"100회 뽑기",
+        target:100,
+        get:()=>state.total
+    },
+
+    {
+        id:"collector",
+        title:"수집가",
+        desc:"아이템 10종 수집",
+        target:10,
+        get:()=>Object.keys(state.collection).length
+    },
+
+    {
+        id:"legend",
+        title:"선택받은 자",
+        desc:"전설 1개 획득",
+        target:1,
+        get:()=>state.legend
+    }
+
+];
+
+function renderAchievements(){
+
+    const box = $("achievements");
+
+    box.innerHTML = "";
+
+    ACHIEVEMENTS.forEach(a=>{
+
+        const value =
+            Math.min(a.target,a.get());
+
+        const done =
+            value >= a.target;
+
+        const el =
+            document.createElement("div");
+
+        el.className =
+            "achievement" +
+            (done ? " done" : "");
+
+        el.innerHTML = `
+            <div class="achievement-title">
+                ${done ? "✓ " : ""}${a.title}
+            </div>
+            <div class="achievement-desc">
+                ${a.desc}
+            </div>
+            <div class="achievement-progress">
+                ${value} / ${a.target}
+            </div>
+        `;
+
+        box.appendChild(el);
+
+    });
+
+}
+
+async function pull(amount){
+
+    if(busy){
+        return;
+    }
+
+    const cost =
+        amount === 10 ? 900 : 100;
+
+    if(state.coins < cost){
+
+        showToast("코인이 부족합니다");
+
+        return;
+    }
+
+    busy = true;
+
+    state.coins -= cost;
+
+    $("result").classList.add("spinning");
+
+    const animationTime =
+        amount === 10 ? 850 : 950;
+
+    const fakeTimer =
+        setInterval(()=>{
+
+            const fake =
+                ITEMS[
+                    Math.floor(
+                        Math.random() * ITEMS.length
+                    )
+                ];
+
+            updateResult(fake);
+
+        },70);
+
+    await new Promise(resolve =>
+        setTimeout(resolve,animationTime)
+    );
+
+    clearInterval(fakeTimer);
+
+    $("result").classList.remove("spinning");
+
+    const results = [];
+
+    for(let i=0;i<amount;i++){
+
+        const item = getItem();
+
+        recordItem(item);
+
+        results.push(item);
+
+    }
+
+    const last =
+        results[results.length - 1];
+
+    updateResult(last);
+
+    const highest =
+        results.reduce(
+            (best,item)=>
+                rarityLevel(item) >
+                rarityLevel(best)
+                    ? item
+                    : best
+        );
+
+    burst(highest);
+
+    if(amount === 1){
+
+        if(rarityLevel(last) >= 3){
+            showModal(
+                "희귀 아이템 획득",
+                createSingleResult(last)
+            );
+        }
+
+    }else{
+
+        showModal(
+            "10회 뽑기 결과",
+            createMultiResult(results)
+        );
+
+    }
+
+    if(state.pity === 0){
+        showToast("천장 발동");
+    }
+
+    updateUI();
+
+    busy = false;
+
+}
+
+function createSingleResult(item){
+
+    return `
+        <div class="reward">
+            <div class="reward-icon">
+                ${item.icon}
+            </div>
+
+            <div class="reward-name ${item.className}">
+                ${item.name}
+            </div>
+
+            <div style="margin-top:8px"
+                 class="${item.className}">
+                ${item.rarity}
+            </div>
+
+            <p style="color:#929ab4">
+                ${item.desc}
+            </p>
+        </div>
+    `;
+
+}
+
+function createMultiResult(results){
+
+    return `
+        <div class="multi-results">
+
+            ${results.map(item=>`
+
+                <div class="multi-item">
+
+                    <div>${item.icon}</div>
+
+                    <small>${item.name}</small>
+
+                    <small class="${item.className}">
+                        ${item.rarity}
+                    </small>
+
+                </div>
+
+            `).join("")}
+
+        </div>
+    `;
+
+}
+
+function showModal(title,content){
+
+    $("modalTitle").textContent = title;
+
+    $("modalContent").innerHTML = content;
+
+    $("modal").classList.add("show");
+
+}
+
+function closeModal(){
+    $("modal").classList.remove("show");
+}
+
+$("draw1").addEventListener("click",()=>{
+    pull(1);
+});
+
+$("draw10").addEventListener("click",()=>{
+    pull(10);
+});
+
+$("earnCoins").addEventListener("click",()=>{
+
+    state.coins += 1000;
+
+    updateUI();
+
+    showToast("코인 1000개 획득");
+
+});
+
+document.querySelectorAll(".tab")
+.forEach(tab=>{
+
+    tab.addEventListener("click",()=>{
+
+        document.querySelectorAll(".tab")
+        .forEach(x=>{
+            x.classList.remove("active");
+        });
+
+        document.querySelectorAll(".panel")
+        .forEach(x=>{
+            x.classList.remove("active");
+        });
+
+        tab.classList.add("active");
+
+        $(tab.dataset.tab)
+        .classList.add("active");
+
+    });
+
+});
+
+$("closeModal").addEventListener(
+    "click",
+    closeModal
+);
+
+$("modal").addEventListener("click",e=>{
+
+    if(e.target === $("modal")){
+        closeModal();
+    }
+
+});
+
+$("reset").addEventListener("click",()=>{
+
+    const answer =
+        confirm(
+            "정말 모든 저장 데이터를 초기화할까요?"
+        );
+
+    if(!answer){
+        return;
+    }
+
+    localStorage.removeItem("randomGachaSave");
+
+    state = {
+        coins:5000,
+        total:0,
+        pity:0,
+        best:-1,
+        legend:0,
+        collection:{},
+        history:[],
+        achievements:{}
+    };
+
+    updateUI();
+
+    updateResult({
+        icon:"?",
+        name:"뽑기를 시작하세요",
+        rarity:"아직 아무것도 없습니다",
+        className:"common",
+        desc:"운명을 확인해보세요"
+    });
+
+    showToast("데이터가 초기화되었습니다");
+
+});
+
+document.addEventListener("keydown",e=>{
+
+    if(e.code === "Space"){
+
+        e.preventDefault();
+
+        pull(1);
+
+    }
+
+    if(e.key === "Escape"){
+        closeModal();
+    }
+
+});
+
+load();
+</script>
+
+</body>
+</html>
